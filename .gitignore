@@ -1,0 +1,15 @@
+*.a
+*.o
+*.log
+*.status
+configure
+tftp/tftp
+tftp/tftp.1
+tftpd/tftpd
+tftpd/tftpd.8
+version.h
+MCONFIG
+aconfig.h
+aconfig.h.in
+autom4te.cache
+autom4te.cache/*
