@@ -72,6 +72,10 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_mandir}/man8/*
 
 %changelog
+* Sun Jan 29 2012 Mickey J. Malone <mickey.malone@me.com>
+- Added additional functionality to dump recv data to stdout
+- Moved all client info/error output to stderr
+
 * Tue Sep 14 2004 H. Peter Anvin <hpa@zytor.com>
 - removed completely broken "Malta" patch.
 - integrated into build machinery so rpm -ta works.

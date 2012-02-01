@@ -130,7 +130,7 @@ void tftp_sendfile(int fd, const char *name, const char *mode)
             ap_opcode = ntohs((u_short) ap->th_opcode);
             ap_block = ntohs((u_short) ap->th_block);
             if (ap_opcode == ERROR) {
-                printf("Error code %d: %s\n", ap_block, ap->th_msg);
+                fprintf(stderr,"Error code %d: %s\n", ap_block, ap->th_msg);
                 goto abort;
             }
             if (ap_opcode == ACK) {
@@ -144,7 +144,7 @@ void tftp_sendfile(int fd, const char *name, const char *mode)
                  */
                 j = synchnet(f);
                 if (j && trace) {
-                    printf("discarded %d packets\n", j);
+                    fprintf(stderr,"discarded %d packets\n", j);
                 }
                 /*
                  * RFC1129/RFC1350: We MUST NOT re-send the DATA
@@ -233,7 +233,7 @@ void tftp_recvfile(int fd, const char *name, const char *mode)
             dp_opcode = ntohs((u_short) dp->th_opcode);
             dp_block = ntohs((u_short) dp->th_block);
             if (dp_opcode == ERROR) {
-                printf("Error code %d: %s\n", dp_block, dp->th_msg);
+                fprintf(stderr,"Error code %d: %s\n", dp_block, dp->th_msg);
                 goto abort;
             }
             if (dp_opcode == DATA) {
@@ -247,7 +247,7 @@ void tftp_recvfile(int fd, const char *name, const char *mode)
                  */
                 j = synchnet(f);
                 if (j && trace) {
-                    printf("discarded %d packets\n", j);
+                    fprintf(stderr,"discarded %d packets\n", j);
                 }
                 if (dp_block == (block - 1)) {
                     goto send_ack;      /* resend ack */
@@ -268,7 +268,10 @@ void tftp_recvfile(int fd, const char *name, const char *mode)
     (void)sendto(f, ackbuf, 4, 0, (struct sockaddr *)&peeraddr,
                  SOCKLEN(&peeraddr));
     write_behind(file, convert);        /* flush last buffer */
-    fclose(file);
+    if (fileno(file) !=  1)	/* do not close stdout */
+    {
+	fclose(file);
+    }
     stopclock();
     if (amount > 0)
         printstats("Received", amount);
@@ -354,9 +357,9 @@ static void tpacket(const char *s, struct tftphdr *tp, int n)
     u_short op = ntohs((u_short) tp->th_opcode);
 
     if (op < RRQ || op > ERROR)
-        printf("%s opcode=%x ", s, op);
+        fprintf(stderr,"%s opcode=%x ", s, op);
     else
-        printf("%s %s ", s, opcodes[op]);
+        fprintf(stderr,"%s %s ", s, opcodes[op]);
     switch (op) {
 
     case RRQ:
@@ -364,19 +367,19 @@ static void tpacket(const char *s, struct tftphdr *tp, int n)
         n -= 2;
         file = cp = (char *)&(tp->th_stuff);
         cp = strchr(cp, '\0');
-        printf("<file=%s, mode=%s>\n", file, cp + 1);
+        fprintf(stderr,"<file=%s, mode=%s>\n", file, cp + 1);
         break;
 
     case DATA:
-        printf("<block=%d, %d bytes>\n", ntohs(tp->th_block), n - 4);
+        fprintf(stderr,"<block=%d, %d bytes>\n", ntohs(tp->th_block), n - 4);
         break;
 
     case ACK:
-        printf("<block=%d>\n", ntohs(tp->th_block));
+        fprintf(stderr,"<block=%d>\n", ntohs(tp->th_block));
         break;
 
     case ERROR:
-        printf("<code=%d, msg=%s>\n", ntohs(tp->th_code), tp->th_msg);
+        fprintf(stderr,"<code=%d, msg=%s>\n", ntohs(tp->th_code), tp->th_msg);
         break;
     }
 }
@@ -402,9 +405,8 @@ static void printstats(const char *direction, unsigned long amount)
     delta = (tstop.tv_sec + (tstop.tv_usec / 100000.0)) -
         (tstart.tv_sec + (tstart.tv_usec / 100000.0));
     if (verbose) {
-        printf("%s %lu bytes in %.1f seconds", direction, amount, delta);
-        printf(" [%.0f bit/s]", (amount * 8.) / delta);
-        putchar('\n');
+        fprintf(stderr,"%s %lu bytes in %.1f seconds", direction, amount, delta);
+        fprintf(stderr," [%.0f bit/s]\n", (amount * 8.) / delta);
     }
 }
 
@@ -416,7 +418,7 @@ static void timer(int sig)
 
     timeout += rexmtval;
     if (timeout >= maxtimeout) {
-        printf("Transfer timed out.\n");
+        fprintf(stderr,"Transfer timed out.\n");
         errno = save_errno;
         siglongjmp(toplevel, -1);
     }

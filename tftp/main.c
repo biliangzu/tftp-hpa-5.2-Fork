@@ -84,6 +84,7 @@ int f = -1;
 u_short port;
 int trace;
 int verbose;
+static int iscmd = 0;
 int literal;
 int connected;
 const struct modes *mode;
@@ -205,7 +206,6 @@ int main(int argc, char *argv[])
     union sock_addr sa;
     int arg;
     static int pargc, peerargc;
-    static int iscmd = 0;
     char **pargv;
     const char *optx;
     char *peerargv[3];
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
                     break;
                 case 'V':
                     /* Print version and configuration to stdout and exit */
-                    printf("%s\n", TFTP_CONFIG_STR);
+                    fprintf(stderr,"%s\n", TFTP_CONFIG_STR);
                     exit(0);
                 case 'l':
                     literal = 1;
@@ -391,7 +391,7 @@ static void getmoreargs(const char *partial, const char *mprompt)
     int len = strlen(partial);
 
     strcpy(line, partial);
-    fputs(mprompt, stdout);
+    fputs(mprompt, stderr);
     if (fgets(line + len, LBUFLEN - len, stdin) == 0)
         if (feof(stdin))
             exit(0);            /* EOF */
@@ -409,15 +409,15 @@ void setpeer(int argc, char *argv[])
         argv = margv;
     }
     if ((argc < 2) || (argc > 3)) {
-        printf("usage: %s host-name [port]\n", argv[0]);
+        fprintf(stderr,"usage: %s host-name [port]\n", argv[0]);
         return;
     }
 
     peeraddr.sa.sa_family = ai_fam;
     err = set_sock_addr(argv[1], &peeraddr, &hostname);
     if (err) {
-        printf("Error: %s\n", gai_strerror(err));
-        printf("%s: unknown host\n", argv[1]);
+        fprintf(stderr,"Error: %s\n", gai_strerror(err));
+        fprintf(stderr,"%s: unknown host\n", argv[1]);
         connected = 0;
         return;
     }
@@ -454,7 +454,7 @@ void setpeer(int argc, char *argv[])
             char *ep;
             myport = strtoul(argv[2], &ep, 10);
             if (*ep || myport > 65535UL) {
-                printf("%s: bad port number\n", argv[2]);
+                fprintf(stderr,"%s: bad port number\n", argv[2]);
                 connected = 0;
                 return;
             }
@@ -468,7 +468,7 @@ void setpeer(int argc, char *argv[])
                                tmp, INET6_ADDRSTRLEN);
         if (!tp)
             tp = (char *)"???";
-        printf("Connected to %s (%s), port %u\n",
+        fprintf(stderr,"Connected to %s (%s), port %u\n",
                hostname, tp, (unsigned int)ntohs(port));
     }
     connected = 1;
@@ -480,7 +480,7 @@ void modecmd(int argc, char *argv[])
     const char *sep;
 
     if (argc < 2) {
-        printf("Using %s mode to transfer files.\n", mode->m_mode);
+        fprintf(stderr,"Using %s mode to transfer files.\n", mode->m_mode);
         return;
     }
     if (argc == 2) {
@@ -491,18 +491,18 @@ void modecmd(int argc, char *argv[])
             settftpmode(p);
             return;
         }
-        printf("%s: unknown mode\n", argv[1]);
+        fprintf(stderr,"%s: unknown mode\n", argv[1]);
         /* drop through and print usage message */
     }
 
-    printf("usage: %s [", argv[0]);
+    fprintf(stderr,"usage: %s [", argv[0]);
     sep = " ";
     for (p = modes; p->m_name; p++) {
-        printf("%s%s", sep, p->m_name);
+        fprintf(stderr,"%s%s", sep, p->m_name);
         if (*sep == ' ')
             sep = " | ";
     }
-    printf(" ]\n");
+    fprintf(stderr," ]\n");
     return;
 }
 
@@ -524,7 +524,7 @@ static void settftpmode(const struct modes *newmode)
 {
     mode = newmode;
     if (verbose)
-        printf("mode set to %s\n", mode->m_mode);
+        fprintf(stderr,"mode set to %s\n", mode->m_mode);
 }
 
 /*
@@ -559,8 +559,8 @@ void put(int argc, char *argv[])
         peeraddr.sa.sa_family = ai_fam;
         err = set_sock_addr(cp, &peeraddr,&hostname);
         if (err) {
-            printf("Error: %s\n", gai_strerror(err));
-            printf("%s: unknown host\n", argv[1]);
+            fprintf(stderr,"Error: %s\n", gai_strerror(err));
+            fprintf(stderr,"%s: unknown host\n", argv[1]);
             connected = 0;
             return;
         }
@@ -568,7 +568,7 @@ void put(int argc, char *argv[])
         connected = 1;
     }
     if (!connected) {
-        printf("No target machine specified.\n");
+        fprintf(stderr,"No target machine specified.\n");
         return;
     }
     if (argc < 4) {
@@ -580,7 +580,7 @@ void put(int argc, char *argv[])
             return;
         }
         if (verbose)
-            printf("putting %s to %s:%s [%s]\n",
+            fprintf(stderr,"putting %s to %s:%s [%s]\n",
                    cp, hostname, targ, mode->m_mode);
         sa_set_port(&peeraddr, port);
         tftp_sendfile(fd, targ, mode->m_mode);
@@ -599,7 +599,7 @@ void put(int argc, char *argv[])
             continue;
         }
         if (verbose)
-            printf("putting %s to %s:%s [%s]\n",
+            fprintf(stderr,"putting %s to %s:%s [%s]\n",
                    argv[n], hostname, targ, mode->m_mode);
         sa_set_port(&peeraddr, port);
         tftp_sendfile(fd, targ, mode->m_mode);
@@ -608,8 +608,8 @@ void put(int argc, char *argv[])
 
 static void putusage(char *s)
 {
-    printf("usage: %s file ... host:target, or\n", s);
-    printf("       %s file ... target (when already connected)\n", s);
+    fprintf(stderr,"usage: %s file ... host:target, or\n", s);
+    fprintf(stderr,"       %s file ... target (when already connected)\n", s);
 }
 
 /*
@@ -650,8 +650,8 @@ void get(int argc, char *argv[])
             peeraddr.sa.sa_family = ai_fam;
             err = set_sock_addr(argv[n], &peeraddr, &hostname);
             if (err) {
-                printf("Warning: %s\n", gai_strerror(err));
-                printf("%s: unknown host\n", argv[1]);
+                fprintf(stderr,"Warning: %s\n", gai_strerror(err));
+                fprintf(stderr,"%s: unknown host\n", argv[1]);
                 continue;
             }
             ai_fam = peeraddr.sa.sa_family;
@@ -659,30 +659,44 @@ void get(int argc, char *argv[])
         }
         if (argc < 4) {
             cp = argc == 3 ? argv[2] : tail(src);
-            fd = open(cp, O_WRONLY | O_CREAT | O_TRUNC | mode->m_openflags,
-                      0666);
-            if (fd < 0) {
-                fprintf(stderr, "tftp: ");
-                perror(cp);
-                return;
+	    if(cp[0] == '-'){
+                cp = (char*)"stdout";
+                fd = 1;
             }
-            if (verbose)
-                printf("getting from %s:%s to %s [%s]\n",
+	    else {
+            	fd = open(cp, O_WRONLY | O_CREAT | O_TRUNC | mode->m_openflags,
+                      	0666);
+            	if (fd < 0) {
+                    fprintf(stderr, "tftp: ");
+                    perror(cp);
+            	    return;
+		}
+	    }
+	    if (verbose)
+                fprintf(stderr,"getting from %s:%s to %s [%s]\n",
                        hostname, src, cp, mode->m_mode);
             sa_set_port(&peeraddr, port);
             tftp_recvfile(fd, src, mode->m_mode);
             break;
         }
-        cp = tail(src);         /* new .. jdg */
-        fd = open(cp, O_WRONLY | O_CREAT | O_TRUNC | mode->m_openflags,
-                  0666);
-        if (fd < 0) {
-            fprintf(stderr, "tftp: ");
-            perror(cp);
-            continue;
+	
+	cp = tail(src);         /* new .. jdg */
+	if(cp[0] == '-'){
+            cp = (char*)"stdout";
+            fd = 1;
         }
-        if (verbose)
-            printf("getting from %s:%s to %s [%s]\n",
+	else {
+            fd = open(cp, O_WRONLY | O_CREAT | O_TRUNC | mode->m_openflags,
+                  0666);
+            if (fd < 0) {
+	        fprintf(stderr, "tftp: ");
+                perror(cp);
+                continue;
+	    }
+	}
+        
+	if (verbose)
+            fprintf(stderr,"getting from %s:%s to %s [%s]\n",
                    hostname, src, cp, mode->m_mode);
         sa_set_port(&peeraddr, port);
         tftp_recvfile(fd, src, mode->m_mode);
@@ -691,8 +705,8 @@ void get(int argc, char *argv[])
 
 static void getusage(char *s)
 {
-    printf("usage: %s host:file host:file ... file, or\n", s);
-    printf("       %s file file ... file if connected\n", s);
+    fprintf(stderr,"usage: %s host:file host:file ... file, or\n", s);
+    fprintf(stderr,"       %s file file ... file if connected\n", s);
 }
 
 int rexmtval = TIMEOUT;
@@ -708,12 +722,12 @@ void setrexmt(int argc, char *argv[])
         argv = margv;
     }
     if (argc != 2) {
-        printf("usage: %s value\n", argv[0]);
+        fprintf(stderr,"usage: %s value\n", argv[0]);
         return;
     }
     t = atoi(argv[1]);
     if (t < 0)
-        printf("%s: bad value\n", argv[1]);
+        fprintf(stderr,"%s: bad value\n", argv[1]);
     else
         rexmtval = t;
 }
@@ -731,12 +745,12 @@ void settimeout(int argc, char *argv[])
         argv = margv;
     }
     if (argc != 2) {
-        printf("usage: %s value\n", argv[0]);
+        fprintf(stderr,"usage: %s value\n", argv[0]);
         return;
     }
     t = atoi(argv[1]);
     if (t < 0)
-        printf("%s: bad value\n", argv[1]);
+        fprintf(stderr,"%s: bad value\n", argv[1]);
     else
         maxtimeout = t;
 }
@@ -746,7 +760,7 @@ void setliteral(int argc, char *argv[])
     (void)argc;
     (void)argv;                 /* Quiet unused warning */
     literal = !literal;
-    printf("Literal mode %s.\n", literal ? "on" : "off");
+    fprintf(stderr,"Literal mode %s.\n", literal ? "on" : "off");
 }
 
 void status(int argc, char *argv[])
@@ -754,13 +768,13 @@ void status(int argc, char *argv[])
     (void)argc;
     (void)argv;                 /* Quiet unused warning */
     if (connected)
-        printf("Connected to %s.\n", hostname);
+        fprintf(stderr,"Connected to %s.\n", hostname);
     else
-        printf("Not connected.\n");
-    printf("Mode: %s Verbose: %s Tracing: %s Literal: %s\n", mode->m_mode,
+        fprintf(stderr,"Not connected.\n");
+    fprintf(stderr,"Mode: %s Verbose: %s Tracing: %s Literal: %s\n", mode->m_mode,
            verbose ? "on" : "off", trace ? "on" : "off",
            literal ? "on" : "off");
-    printf("Rexmt-interval: %d seconds, Max-timeout: %d seconds\n",
+    fprintf(stderr,"Rexmt-interval: %d seconds, Max-timeout: %d seconds\n",
            rexmtval, maxtimeout);
 }
 
@@ -796,6 +810,7 @@ static void command(void)
     struct cmd *c;
 
     for (;;) {
+	fflush(stdout);
 #ifdef WITH_READLINE
         if (line) {
             free(line);
@@ -805,7 +820,7 @@ static void command(void)
         if (!line)
             exit(0);            /* EOF */
 #else
-        fputs(prompt, stdout);
+        fputs(prompt, stderr);
         if (fgets(line, LBUFLEN, stdin) == 0) {
             if (feof(stdin)) {
                 exit(0);
@@ -827,11 +842,11 @@ static void command(void)
 
         c = getcmd(margv[0]);
         if (c == (struct cmd *)-1) {
-            printf("?Ambiguous command\n");
+            fprintf(stderr,"?Ambiguous command\n");
             continue;
         }
         if (c == 0) {
-            printf("?Invalid command\n");
+            fprintf(stderr,"?Invalid command\n");
             continue;
         }
         (*c->handler) (margc, margv);
@@ -905,12 +920,12 @@ void help(int argc, char *argv[])
 {
     struct cmd *c;
 
-    printf("%s\n", VERSION);
+    fprintf(stderr,"%s\n", VERSION);
 
     if (argc == 1) {
-        printf("Commands may be abbreviated.  Commands are:\n\n");
+        fprintf(stderr,"Commands may be abbreviated.  Commands are:\n\n");
         for (c = cmdtab; c->name; c++)
-            printf("%-*s\t%s\n", (int)HELPINDENT, c->name, c->help);
+            fprintf(stderr,"%-*s\t%s\n", (int)HELPINDENT, c->name, c->help);
         return;
     }
     while (--argc > 0) {
@@ -918,11 +933,11 @@ void help(int argc, char *argv[])
         arg = *++argv;
         c = getcmd(arg);
         if (c == (struct cmd *)-1)
-            printf("?Ambiguous help command %s\n", arg);
+            fprintf(stderr,"?Ambiguous help command %s\n", arg);
         else if (c == (struct cmd *)0)
-            printf("?Invalid help command %s\n", arg);
+            fprintf(stderr,"?Invalid help command %s\n", arg);
         else
-            printf("%s\n", c->help);
+            fprintf(stderr,"%s\n", c->help);
     }
 }
 
@@ -932,7 +947,7 @@ void settrace(int argc, char *argv[])
     (void)argv;                 /* Quiet unused warning */
 
     trace = !trace;
-    printf("Packet tracing %s.\n", trace ? "on" : "off");
+    fprintf(stderr,"Packet tracing %s.\n", trace ? "on" : "off");
 }
 
 void setverbose(int argc, char *argv[])
@@ -941,5 +956,5 @@ void setverbose(int argc, char *argv[])
     (void)argv;                 /* Quiet unused warning */
 
     verbose = !verbose;
-    printf("Verbose mode %s.\n", verbose ? "on" : "off");
+    fprintf(stderr,"Verbose mode %s.\n", verbose ? "on" : "off");
 }

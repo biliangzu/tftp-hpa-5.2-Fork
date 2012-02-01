@@ -122,12 +122,17 @@ commands.
 \fBget\fP \fIfile\fP
 .sp -.6l
 .TP
+\fBget\fP \fIfile -\fP
+.sp -.6l
+.TP
 \fBget\fP \fIremotefile localfile\fP
 .sp -.6l
 .TP
 \fBget\fP \fIfile1 file2 file3...\fP
-Get a file or set of files from the specified sources.  A remote
-filename can be in one of two forms: a plain filename on the remote
+Get a file or set of files from the specified sources.  When 
+.I - 
+is used as the localfile, it is interpreted as stdout. 
+A remote filename can be in one of two forms: a plain filename on the remote
 host, if the host has already been specified, or a string of the form
 .I "host:filename"
 to specify both a host and filename at the same time.  If the latter
